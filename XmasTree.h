@@ -1,3 +1,7 @@
+// LEDs for small ceramic Christmas tree, powered by an ATTiny84A microcontroller.
+// Copyright (C) 2023 by Jack Christensen and licensed under
+// GNU GPL v3.0, https://www.gnu.org/licenses/gpl.html
+
 #include "FireLED.h"
 
 // A Christmas tree with various lighting effects.
@@ -18,6 +22,7 @@ class XmasTree
         void fadeDnUp(uint8_t ledNbr1, uint8_t ledNbr2, uint32_t dly);
         void on(uint8_t ledNbr);
         void off(uint8_t ledNbr);
+        void allOff();
         void lampTest();
 
     private:
@@ -29,7 +34,7 @@ class XmasTree
         uint32_t m_lastVccCheck {0};
         const uint32_t m_VccCheckInterval {1000};
         uint32_t m_effectStart;
-        const uint32_t m_effectDuration {10000};
+        const uint32_t m_effectDuration {30000};
 
         const uint8_t
             m_leds[4]       {3, 2, 4, 5},
@@ -39,16 +44,17 @@ class XmasTree
             m_unusedPins[4] {0, 1, 6, 10};
 
         const uint8_t
-            MIN_DUTY_CYCLE {0},
+            MIN_DUTY_CYCLE {16},
             MAX_DUTY_CYCLE {255};
         const uint32_t
             MIN_DELAY {10},
             MAX_DELAY {250};
 
-        FireLED f1{m_leds[0], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
-        FireLED f2{m_leds[1], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
-        FireLED f3{m_leds[2], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
-        FireLED f4{m_leds[3], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
+        //FireLED f1{m_leds[0], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
+        //FireLED f2{m_leds[1], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
+        //FireLED f3{m_leds[2], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
+        //FireLED f4{m_leds[3], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY};
+        FireLED f2{m_leds[1], MIN_DUTY_CYCLE, MAX_DUTY_CYCLE, MIN_DELAY, MAX_DELAY, m_leds[3]};
 
         movingAvg Vcc{6};
         Button btn{m_buttonPin};    // for future use
@@ -77,18 +83,19 @@ void XmasTree::begin()
 void XmasTree::fire()
 {
     m_effectStart = millis();
-    f1.begin();
+    //f1.begin();
     f2.begin();
-    f3.begin();
-    f4.begin();
+    //f3.begin();
+    //f4.begin();
 
     while (millis() - m_effectStart < m_effectDuration) {
-        f1.run();
+        //f1.run();
         f2.run();
-        f3.run();
-        f4.run();
+        //f3.run();
+        //f4.run();
         checkVcc();
     }
+    allOff();
 }
 
 void XmasTree::twinkle(uint32_t dly)
@@ -133,58 +140,57 @@ void XmasTree::fadePairs(uint32_t dly)
     }
 
     while (millis() - m_effectStart < m_effectDuration) {
-        int step;
         // fade 0 & 2 down, then 1 & 3 up
-        dly = 1; step = 0x80;
-        for (int i=0; i<256; i++) {
+        constexpr int overlap = 64;
+        for (int i=0; i<255-overlap; i++) {
             int valDn = 255 - i;
             analogWrite(m_leds[0], valDn);
             analogWrite(m_leds[2], valDn);
             checkVcc();
             delay(dly);
-            if (i == step) {
-                step /= 2;
-                dly *= 2;
-            }
         }
-        dly = 128; step = 1;
-        for (int i=0; i<256; i++) {
+        for (int i=255-overlap; i<256; i++) {
+            int valDn = 255 - i;
+            int valUp = i - (255 - overlap);
+            analogWrite(m_leds[0], valDn);
+            analogWrite(m_leds[2], valDn);
+            analogWrite(m_leds[1], valUp);
+            analogWrite(m_leds[3], valUp);
+            checkVcc();
+            delay(dly);
+        }
+        for (int i=overlap; i<256; i++) {
             int valUp = i;
             analogWrite(m_leds[1], valUp);
             analogWrite(m_leds[3], valUp);
             checkVcc();
             delay(dly);
-            delay(dly);
-            if (i == step) {
-                step *= 2;
-                dly /= 2;
-            }
         }
 
         // fade 1 & 3 down, then 0 & 2 up
-        dly = 1; step = 0x80;
-        for (int i=0; i<256; i++) {
+        for (int i=0; i<255-overlap; i++) {
             int valDn = 255 - i;
             analogWrite(m_leds[1], valDn);
             analogWrite(m_leds[3], valDn);
             checkVcc();
             delay(dly);
-            if (i == step) {
-                step /= 2;
-                dly *= 2;
-            }
         }
-        dly = 128; step = 1;
-        for (int i=0; i<256; i++) {
+        for (int i=255-overlap; i<256; i++) {
+            int valDn = 255 - i;
+            int valUp = i - (255 - overlap);
+            analogWrite(m_leds[1], valDn);
+            analogWrite(m_leds[3], valDn);
+            analogWrite(m_leds[0], valUp);
+            analogWrite(m_leds[2], valUp);
+            checkVcc();
+            delay(dly);
+        }
+        for (int i=overlap; i<256; i++) {
             int valUp = i;
             analogWrite(m_leds[0], valUp);
             analogWrite(m_leds[2], valUp);
             checkVcc();
             delay(dly);
-            if (i == step) {
-                step *= 2;
-                dly /= 2;
-            }
         }
     }
 
@@ -275,6 +281,15 @@ void XmasTree::on(uint8_t ledNbr)
 void XmasTree::off(uint8_t ledNbr)
 {
     digitalWrite(m_leds[ledNbr], LOW);
+}
+
+// turn all leds off
+void XmasTree::allOff()
+{
+    for (uint8_t i = 0; i < sizeof(m_leds) / sizeof(m_leds[0]); i++) {
+        digitalWrite(m_leds[i], LOW);
+    }
+
 }
 
 // lamp test

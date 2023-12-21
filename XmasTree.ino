@@ -23,7 +23,7 @@ XmasTree tree;
 void setup()
 {
     tree.begin();
-    //tree.lampTest();
+    tree.lampTest();
 }
 
 void loop()

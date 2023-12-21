@@ -208,7 +208,7 @@ void XmasTree::rotate(uint32_t dly)
 {
     m_effectStart = millis();
     on(0); delay(dly);
-    
+
     while (millis() - m_effectStart < m_effectDuration) {
         for (int i=0; i<4; i++) {
             int next = (i + 1 > 3) ? 0 : i + 1;
@@ -286,28 +286,44 @@ void XmasTree::off(uint8_t ledNbr)
 // turn all leds off
 void XmasTree::allOff()
 {
-    for (uint8_t i = 0; i < sizeof(m_leds) / sizeof(m_leds[0]); i++) {
+    for (uint8_t i=0; i < sizeof(m_leds) / sizeof(m_leds[0]); i++) {
         digitalWrite(m_leds[i], LOW);
     }
 
 }
 
-// lamp test
+// lamp test - if button pressed at power on, run a lamp test
+// that never returns, else just blip the debug led.
 void XmasTree::lampTest()
 {
-    on(0);
-    delay(250);
-    off(0); on(1);
-    delay(250);
-    off(1); on(2);
-    delay(250);
-    off(2); on(3);
-    delay(250);
-    off(3);
-    digitalWrite(m_debugLED, HIGH);
-    delay(250);
-    digitalWrite(m_debugLED, LOW);
-    delay(500);
+    if (btn.isPressed()) {
+        digitalWrite(m_debugLED, HIGH);
+        delay(1000);
+        digitalWrite(m_debugLED, LOW);
+        delay(250);
+        for (uint8_t n=0; n<2; n++) {
+            for (uint8_t i=0; i < sizeof(m_leds) / sizeof(m_leds[0]); i++) {
+                uint8_t j = (i == 0) ? sizeof(m_leds) / sizeof(m_leds[0]) - 1 : i - 1;
+                digitalWrite(m_leds[j], LOW);
+                digitalWrite(m_leds[i], HIGH);
+                delay(1000);
+            }
+        }
+        while (true) {
+            for (uint8_t i=0; i < sizeof(m_leds) / sizeof(m_leds[0]); i++) {
+                uint8_t j = (i == 0) ? sizeof(m_leds) / sizeof(m_leds[0]) - 1 : i - 1;
+                digitalWrite(m_leds[j], LOW);
+                digitalWrite(m_leds[i], HIGH);
+                delay(10000);
+            }
+        }
+    }
+    else {
+        digitalWrite(m_debugLED, HIGH);
+        delay(250);
+        digitalWrite(m_debugLED, LOW);
+        delay(250);
+    }
 }
 
 // read 1.1V reference against Vcc.
@@ -348,10 +364,10 @@ void XmasTree::gotoSleep()
     uint8_t adcsra = ADCSRA;                // save ADCSRA
     ADCSRA &= ~_BV(ADEN);                   // disable ADC
     cli();                                  // stop interrupts to ensure the BOD timed sequence executes as required
-    uint8_t mcucr1 = MCUCR | _BV(BODS) | _BV(BODSE);   // turn off the brown-out detector
-    uint8_t mcucr2 = mcucr1 & ~_BV(BODSE);
-    MCUCR = mcucr1;
-    MCUCR = mcucr2;
+//    uint8_t mcucr1 = MCUCR | _BV(BODS) | _BV(BODSE);   // turn off the brown-out detector
+//    uint8_t mcucr2 = mcucr1 & ~_BV(BODSE);
+//    MCUCR = mcucr1;
+//    MCUCR = mcucr2;
 //    sei();                                // keep interrupts disabled, sleep until external reset or power-on reset
     PORTA &= ~_BV(PORTA3);                  // turn off m_boostEnable, the fast way
     sleep_cpu();                            // go to sleep
